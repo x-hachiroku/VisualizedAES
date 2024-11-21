@@ -10,14 +10,19 @@ from tkinter import ttk
 
 def cv2tk(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
-    img = cv2.resize(img, (350, 350))
+    img = cv2.resize(img, (384, 384), interpolation=cv2.INTER_NEAREST)
     img = Image.fromarray(img, 'RGBA')
     return ImageTk.PhotoImage(img)
 
 def key_cb(*args):
-    keystr = key_val.get()
-    key_length = int(key_length_val.get())
-    if keystr == "00...00":
+    try:
+        keystr = key_val.get()
+        key_length = int(key_length_val.get())
+    except:
+        keystr = "00...00"
+        key_length = 128
+
+    if keystr == "00...00" or keystr == "00"*16:
         key = b'\x00' * (key_length // 8)
     elif keystr == "ff...ff":
         key = b'\xff' * (key_length // 8)
@@ -25,15 +30,21 @@ def key_cb(*args):
         key = b'\xaa' * (key_length // 8)
     else:
         key = token_bytes(key_length // 8)
-    print('key', key.hex())
 
-    key_val.set(key.hex())
-    key_entry.configure(text=key.hex())
+    try:
+        key_val.set(key.hex())
+        key_entry.configure(text=key.hex())
+    except:
+        pass
 
 
 def iv_cb(*args):
-    ivstr = iv_val.get()
-    if ivstr == "00...00":
+    try:
+        ivstr = iv_val.get()
+    except:
+        ivstr = "00...00"
+
+    if ivstr == "00...00" or ivstr == "00"*16:
         iv = b'\x00' * 16
     elif ivstr == "ff...ff":
         iv = b'\xff' * 16
@@ -42,8 +53,11 @@ def iv_cb(*args):
     else:
         iv = token_bytes(16)
 
-    iv_val.set(iv.hex())
-    iv_entry.configure(text=iv.hex())
+    try:
+        iv_val.set(iv.hex())
+        iv_entry.configure(text=iv.hex())
+    except:
+        pass
 
 
 def encrypt():
@@ -52,7 +66,16 @@ def encrypt():
     key = bytes.fromhex(key_val.get())
     iv = bytes.fromhex(iv_val.get())
 
-    rounds = int(rounds_val.get())
+    try:
+        rounds = int(rounds_val.get())
+        if rounds < 0:
+            rounds = 0
+        elif rounds > 16:
+            rounds = 16
+    except:
+        rounds = 10
+    rounds_val.set(str(rounds))
+
     no_sub_bytes = no_sub_bytes_val.get()
     no_shift_rows = no_shift_rows_val.get()
     no_mix_columns = no_mix_columns_val.get()
@@ -109,7 +132,7 @@ mari = cv2.imread('./mari.png', cv2.IMREAD_UNCHANGED)
 
 root = tk.Tk()
 root.title("Visualized AES")
-root.geometry("1080x350")
+root.geometry("1200x390")
 main_frame = tk.Frame(root)
 main_frame.columnconfigure(0, weight=1)
 main_frame.columnconfigure(1, weight=1)
@@ -178,13 +201,13 @@ rounds_entry = ttk.Entry(menu_frame, textvariable=rounds_val).grid(row=5, column
 key_label = tk.Label(menu_frame, text="Key:").grid(row=6, column=0)
 key_val = tk.StringVar(value="00"*16)
 key_val.trace_add('write', key_cb)
-key_entry = ttk.OptionMenu(menu_frame, key_val, "00"*16, "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
+key_entry = ttk.OptionMenu(menu_frame, key_val, "00"*16, "00...00", "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
 key_entry.grid(row=6, column=1)
 
 iv_label = tk.Label(menu_frame, text="IV:").grid(row=7, column=0)
 iv_val = tk.StringVar(value="00"*16)
 iv_val.trace_add('write', iv_cb)
-iv_entry = ttk.OptionMenu(menu_frame, iv_val, "00"*16, "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
+iv_entry = ttk.OptionMenu(menu_frame, iv_val, "00"*16, "00...00", "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
 iv_entry.grid(row=7, column=1)
 
 no_sub_bytes_label = tk.Label(menu_frame, text="Disable S-Box:").grid(row=8, column=0)
