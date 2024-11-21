@@ -1,4 +1,5 @@
 from aes import AES
+from secrets import token_bytes
 
 import cv2
 import numpy as np
@@ -13,10 +14,9 @@ def cv2tk(img):
     img = Image.fromarray(img, 'RGBA')
     return ImageTk.PhotoImage(img)
 
-def encrypt():
-    global ciphertext, ciphertext_bytes, ciphertext_tk
-    key_length = int(key_length_val.get())
+def key_cb(*args):
     keystr = key_val.get()
+    key_length = int(key_length_val.get())
     if keystr == "00...00":
         key = b'\x00' * (key_length // 8)
     elif keystr == "ff...ff":
@@ -24,9 +24,14 @@ def encrypt():
     elif keystr == "aa...aa":
         key = b'\xaa' * (key_length // 8)
     else:
-        with open('/dev/urandom', 'rb') as f:
-            key = f.read(key_length // 8)
+        key = token_bytes(key_length // 8)
+    print('key', key.hex())
 
+    key_val.set(key.hex())
+    key_entry.configure(text=key.hex())
+
+
+def iv_cb(*args):
     ivstr = iv_val.get()
     if ivstr == "00...00":
         iv = b'\x00' * 16
@@ -35,8 +40,17 @@ def encrypt():
     elif ivstr == "aa...aa":
         iv = b'\xaa' * 16
     else:
-        with open('/dev/urandom', 'rb') as f:
-            iv = f.read(16)
+        iv = token_bytes(16)
+
+    iv_val.set(iv.hex())
+    iv_entry.configure(text=iv.hex())
+
+
+def encrypt():
+    global ciphertext, ciphertext_bytes, ciphertext_tk
+
+    key = bytes.fromhex(key_val.get())
+    iv = bytes.fromhex(iv_val.get())
 
     rounds = int(rounds_val.get())
     no_sub_bytes = no_sub_bytes_val.get()
@@ -136,6 +150,9 @@ menu_frame.rowconfigure(8, weight=1)
 menu_frame.rowconfigure(9, weight=1)
 menu_frame.rowconfigure(10, weight=1)
 
+style = ttk.Style()
+style.configure('my.TMenubutton', font=('Courier', 6))
+
 source_label = tk.Label(menu_frame, text="Input:").grid(row=0, column=0)
 source_val = tk.StringVar(value="Tippy")
 source_val.trace_add('write', source_cb)
@@ -151,6 +168,7 @@ op_mode_entry = ttk.OptionMenu(menu_frame, op_mode_val, "ECB", "ECB", "CBC", "CT
 
 key_length_label = tk.Label(menu_frame, text="Key Length:").grid(row=4, column=0)
 key_length_val = tk.StringVar(value="128")
+key_length_val.trace_add('write', key_cb)
 key_length_entry = ttk.OptionMenu(menu_frame, key_length_val, "128", "128", "192", "256").grid(row=4, column=1)
 
 rounds_label = tk.Label(menu_frame, text="rounds:").grid(row=5, column=0)
@@ -158,12 +176,16 @@ rounds_val = tk.StringVar(value="10")
 rounds_entry = ttk.Entry(menu_frame, textvariable=rounds_val).grid(row=5, column=1)
 
 key_label = tk.Label(menu_frame, text="Key:").grid(row=6, column=0)
-key_val = tk.StringVar(value="00...00")
-key_entry = ttk.OptionMenu(menu_frame, key_val, "00...00", "ff...ff", "aa...aa", "Random").grid(row=6, column=1)
+key_val = tk.StringVar(value="00"*16)
+key_val.trace_add('write', key_cb)
+key_entry = ttk.OptionMenu(menu_frame, key_val, "00"*16, "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
+key_entry.grid(row=6, column=1)
 
 iv_label = tk.Label(menu_frame, text="IV:").grid(row=7, column=0)
-iv_val = tk.StringVar(value="00...00")
-iv_entry = ttk.OptionMenu(menu_frame, iv_val, "00...00", "ff...ff", "aa...aa", "Random").grid(row=7, column=1)
+iv_val = tk.StringVar(value="00"*16)
+iv_val.trace_add('write', iv_cb)
+iv_entry = ttk.OptionMenu(menu_frame, iv_val, "00"*16, "ff...ff", "aa...aa", "New Random", style='my.TMenubutton')
+iv_entry.grid(row=7, column=1)
 
 no_sub_bytes_label = tk.Label(menu_frame, text="Disable S-Box:").grid(row=8, column=0)
 no_sub_bytes_val = tk.BooleanVar(value=False)
